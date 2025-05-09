@@ -178,11 +178,7 @@ export default function CheckoutPage() {
 
       if (paymentError) throw paymentError
 
-      toast({
-        title: "Order placed successfully",
-        description: `Your order #${newOrderNo} has been placed.`,
-      })
-
+      // Clear cart and redirect to success page
       clearCart()
       router.push(`/checkout/success?order=${newOrderNo}`)
     } catch (error: any) {
