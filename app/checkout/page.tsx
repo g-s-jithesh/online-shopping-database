@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,12 +12,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/lib/supabase/client"
 import { useCart } from "@/lib/cart-context"
+import { useSupabase } from "@/components/supabase-provider"
 import OrderSummary from "@/components/order-summary"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { cartItems, getCartTotal, clearCart } = useCart()
+  const { user } = useSupabase()
   const [isLoading, setIsLoading] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -29,10 +31,33 @@ export default function CheckoutPage() {
     mobile: "",
   })
 
-  if (cartItems.length === 0) {
-    router.push("/cart")
-    return null
-  }
+  useEffect(() => {
+    // Redirect to cart if cart is empty
+    if (cartItems.length === 0) {
+      router.push("/cart")
+    }
+
+    // Load user profile data if authenticated
+    const loadUserProfile = async () => {
+      if (user) {
+        const supabase = createClient()
+        const { data, error } = await supabase.from("app_user").select("*").eq("user_id", user.id).single()
+
+        if (!error && data) {
+          setFormData({
+            name: data.user_name || "",
+            email: data.user_email || "",
+            address: data.user_address || "",
+            city: "",
+            pincode: data.user_pincode || "",
+            mobile: data.user_mobile || "",
+          })
+        }
+      }
+    }
+
+    loadUserProfile()
+  }, [user, cartItems.length, router])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -46,18 +71,51 @@ export default function CheckoutPage() {
     try {
       const supabase = createClient()
 
-      // Create app_user record or get existing one
-      const { data: existingUser, error: userQueryError } = await supabase
-        .from("app_user")
-        .select("user_id")
-        .eq("user_email", formData.email)
-        .maybeSingle()
+      // Get or create user
+      let userId = user?.id
 
-      let userId
+      if (!userId) {
+        // Check if user exists by email
+        const { data: existingUser, error: userQueryError } = await supabase
+          .from("app_user")
+          .select("user_id")
+          .eq("user_email", formData.email)
+          .maybeSingle()
 
-      if (existingUser) {
-        userId = existingUser.user_id
-        // Update user info
+        if (existingUser) {
+          userId = existingUser.user_id
+          // Update user info
+          await supabase
+            .from("app_user")
+            .update({
+              user_name: formData.name,
+              user_address: formData.address,
+              user_mobile: formData.mobile,
+              user_pincode: formData.pincode,
+            })
+            .eq("user_id", userId)
+        } else {
+          // Create new user
+          const { data: newUser, error: createUserError } = await supabase
+            .from("app_user")
+            .insert({
+              user_id: crypto.randomUUID(),
+              user_name: formData.name,
+              user_email: formData.email,
+              user_address: formData.address,
+              user_mobile: formData.mobile,
+              user_pincode: formData.pincode,
+              user_cart: [],
+              user_wish_list: [],
+              user_role: "customer",
+            })
+            .select()
+
+          if (createUserError) throw createUserError
+          userId = newUser[0].user_id
+        }
+      } else {
+        // Update authenticated user info
         await supabase
           .from("app_user")
           .update({
@@ -67,25 +125,6 @@ export default function CheckoutPage() {
             user_pincode: formData.pincode,
           })
           .eq("user_id", userId)
-      } else {
-        // Create new user
-        const { data: newUser, error: createUserError } = await supabase
-          .from("app_user")
-          .insert({
-            user_id: crypto.randomUUID(),
-            user_name: formData.name,
-            user_email: formData.email,
-            user_address: formData.address,
-            user_mobile: formData.mobile,
-            user_pincode: formData.pincode,
-            user_cart: [],
-            user_wish_list: [],
-            user_role: "customer",
-          })
-          .select()
-
-        if (createUserError) throw createUserError
-        userId = newUser[0].user_id
       }
 
       // Get next order number
@@ -159,6 +198,10 @@ export default function CheckoutPage() {
     }
   }
 
+  if (cartItems.length === 0) {
+    return null
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
@@ -185,6 +228,7 @@ export default function CheckoutPage() {
                       value={formData.email}
                       onChange={handleChange}
                       required
+                      readOnly={!!user}
                     />
                   </div>
                 </div>

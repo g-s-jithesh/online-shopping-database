@@ -1,6 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { useSupabase } from "@/components/supabase-provider"
 
 export interface CartItem {
   product_no: number
@@ -30,23 +32,50 @@ const CartContext = createContext<CartContextType>({
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const { user } = useSupabase()
 
-  // Load cart from localStorage on initial render
+  // Load cart from localStorage or Supabase on initial render
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart")
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart))
-      } catch (error) {
-        console.error("Failed to parse cart from localStorage:", error)
+    const loadCart = async () => {
+      if (user) {
+        // Load cart from Supabase if user is authenticated
+        const supabase = createClient()
+        const { data, error } = await supabase.from("app_user").select("user_cart").eq("user_id", user.id).single()
+
+        if (!error && data) {
+          setCartItems(data.user_cart || [])
+        }
+      } else {
+        // Load cart from localStorage if user is not authenticated
+        const savedCart = localStorage.getItem("cart")
+        if (savedCart) {
+          try {
+            setCartItems(JSON.parse(savedCart))
+          } catch (error) {
+            console.error("Failed to parse cart from localStorage:", error)
+          }
+        }
       }
     }
-  }, [])
 
-  // Save cart to localStorage whenever it changes
+    loadCart()
+  }, [user])
+
+  // Save cart to localStorage or Supabase whenever it changes
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cartItems))
-  }, [cartItems])
+    const saveCart = async () => {
+      if (user) {
+        // Save cart to Supabase if user is authenticated
+        const supabase = createClient()
+        await supabase.from("app_user").update({ user_cart: cartItems }).eq("user_id", user.id)
+      } else {
+        // Save cart to localStorage if user is not authenticated
+        localStorage.setItem("cart", JSON.stringify(cartItems))
+      }
+    }
+
+    saveCart()
+  }, [cartItems, user])
 
   const addToCart = (product: any, quantity = 1) => {
     setCartItems((prevItems) => {
