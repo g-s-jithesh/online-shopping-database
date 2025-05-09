@@ -96,23 +96,21 @@ export default function CheckoutPage() {
             .eq("user_id", userId)
         } else {
           // Create new user
-          const { data: newUser, error: createUserError } = await supabase
-            .from("app_user")
-            .insert({
-              user_id: crypto.randomUUID(),
-              user_name: formData.name,
-              user_email: formData.email,
-              user_address: formData.address,
-              user_mobile: formData.mobile,
-              user_pincode: formData.pincode,
-              user_cart: [],
-              user_wish_list: [],
-              user_role: "customer",
-            })
-            .select()
+          const newUserId = crypto.randomUUID()
+          const { error: createUserError } = await supabase.from("app_user").insert({
+            user_id: newUserId,
+            user_name: formData.name,
+            user_email: formData.email,
+            user_address: formData.address,
+            user_mobile: formData.mobile,
+            user_pincode: formData.pincode,
+            user_cart: [],
+            user_wish_list: [],
+            user_role: "customer",
+          })
 
           if (createUserError) throw createUserError
-          userId = newUser[0].user_id
+          userId = newUserId
         }
       } else {
         // Update authenticated user info
@@ -188,6 +186,7 @@ export default function CheckoutPage() {
       clearCart()
       router.push(`/checkout/success?order=${newOrderNo}`)
     } catch (error: any) {
+      console.error("Checkout error:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to process your order.",
@@ -228,7 +227,6 @@ export default function CheckoutPage() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      readOnly={!!user}
                     />
                   </div>
                 </div>

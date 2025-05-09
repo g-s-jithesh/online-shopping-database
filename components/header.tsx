@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ShoppingCart, User, Menu, X, LogOut } from "lucide-react"
+import { ShoppingCart, User, Menu, X, LogOut, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -26,8 +26,6 @@ export default function Header() {
   const navigation = [
     { name: "Home", href: "/" },
     { name: "Products", href: "/products" },
-    { name: "About", href: "/about" },
-    { name: "Contact", href: "/contact" },
   ]
 
   return (
@@ -81,6 +79,12 @@ export default function Header() {
                     <Link href="/profile">
                       <User className="mr-2 h-4 w-4" />
                       Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/orders">
+                      <Package className="mr-2 h-4 w-4" />
+                      Orders
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -164,6 +168,12 @@ export default function Header() {
                           <Button variant="outline" className="w-full justify-start">
                             <User className="mr-2 h-4 w-4" />
                             Profile
+                          </Button>
+                        </Link>
+                        <Link href="/orders" onClick={() => setIsOpen(false)}>
+                          <Button variant="outline" className="w-full justify-start">
+                            <Package className="mr-2 h-4 w-4" />
+                            Orders
                           </Button>
                         </Link>
                         <Button variant="outline" className="w-full justify-start" onClick={() => signOut()}>
