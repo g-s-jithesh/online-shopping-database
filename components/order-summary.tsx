@@ -1,16 +1,8 @@
-"use client"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
-interface OrderItem {
-  product_no: number
-  p_description: string
-  product_price: number
-  quantity: number
-}
+import type { CartItem } from "@/lib/cart-context"
 
 interface OrderSummaryProps {
-  items: OrderItem[]
+  items: CartItem[]
 }
 
 export default function OrderSummary({ items }: OrderSummaryProps) {

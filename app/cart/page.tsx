@@ -1,22 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+"use client"
+
+import Link from "next/link"
+import { useCart } from "@/lib/cart-context"
 import CartItems from "@/components/cart-items"
 import CartSummary from "@/components/cart-summary"
 
-export default async function CartPage() {
-  const supabase = createClient()
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect("/auth/login?redirect=/cart")
-  }
-
-  const { data: user } = await supabase.from("app_user").select("*").eq("user_id", session.user.id).single()
-
-  const cartItems = user?.user_cart || []
+export default function CartPage() {
+  const { cartItems } = useCart()
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -26,20 +16,22 @@ export default async function CartPage() {
         <div className="text-center py-12">
           <h2 className="text-2xl font-semibold mb-4">Your cart is empty</h2>
           <p className="mb-6">Looks like you haven't added any products to your cart yet.</p>
-          <a href="/products" className="inline-block bg-primary text-white px-6 py-3 rounded-md">
-            Continue Shopping
-          </a>
+          <Link href="/products">
+            <Button className="inline-block bg-primary text-white px-6 py-3 rounded-md">Continue Shopping</Button>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <CartItems items={cartItems} />
+            <CartItems />
           </div>
           <div>
-            <CartSummary items={cartItems} />
+            <CartSummary />
           </div>
         </div>
       )}
     </div>
   )
 }
+
+import { Button } from "@/components/ui/button"

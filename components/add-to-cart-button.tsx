@@ -1,12 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import { useSupabase } from "./supabase-provider"
+import { useCart } from "@/lib/cart-context"
 
 interface Product {
   product_no: number
@@ -22,17 +20,11 @@ interface AddToCartButtonProps {
 }
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
-  const { user } = useSupabase()
-  const router = useRouter()
+  const { addToCart } = useCart()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleAddToCart = async () => {
-    if (!user) {
-      router.push(`/auth/login?redirect=/products/${product.product_no}`)
-      return
-    }
-
+  const handleAddToCart = () => {
     if (product.quantity_available <= 0) {
       toast({
         title: "Product out of stock",
@@ -45,56 +37,12 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     setIsLoading(true)
 
     try {
-      const supabase = createClient()
-
-      // Get current user cart
-      const { data: userData, error: userError } = await supabase
-        .from("app_user")
-        .select("user_cart")
-        .eq("user_id", user.id)
-        .single()
-
-      if (userError) throw userError
-
-      const currentCart = userData.user_cart || []
-
-      // Check if product already in cart
-      const existingItemIndex = currentCart.findIndex((item: any) => item.product_no === product.product_no)
-
-      let newCart
-
-      if (existingItemIndex >= 0) {
-        // Update quantity if product already in cart
-        newCart = [...currentCart]
-        newCart[existingItemIndex].quantity += 1
-      } else {
-        // Add new product to cart
-        newCart = [
-          ...currentCart,
-          {
-            product_no: product.product_no,
-            p_description: product.p_description,
-            product_price: product.product_price,
-            product_image: product.product_image,
-            quantity: 1,
-          },
-        ]
-      }
-
-      // Update user cart
-      const { error: updateError } = await supabase
-        .from("app_user")
-        .update({ user_cart: newCart })
-        .eq("user_id", user.id)
-
-      if (updateError) throw updateError
+      addToCart(product)
 
       toast({
         title: "Added to cart",
         description: `${product.p_description} has been added to your cart.`,
       })
-
-      router.refresh()
     } catch (error: any) {
       toast({
         title: "Error",

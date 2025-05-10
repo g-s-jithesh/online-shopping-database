@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import AddToCartButton from "@/components/add-to-cart-button"
-import AddToWishlistButton from "@/components/add-to-wishlist-button"
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -49,7 +48,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
 
           <div className="flex flex-col sm:flex-row gap-4">
             <AddToCartButton product={product} />
-            <AddToWishlistButton product={product} />
           </div>
         </div>
       </div>

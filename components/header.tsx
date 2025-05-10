@@ -3,9 +3,8 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ShoppingCart, Heart, User, Menu, X, LogOut, Package } from "lucide-react"
+import { ShoppingCart, User, Menu, X, LogOut, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useSupabase } from "./supabase-provider"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,17 +14,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useCart } from "@/lib/cart-context"
+import { useSupabase } from "@/components/supabase-provider"
 
 export default function Header() {
-  const { user, signOut } = useSupabase()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const { cartItems } = useCart()
+  const { user, signOut } = useSupabase()
 
   const navigation = [
     { name: "Home", href: "/" },
     { name: "Products", href: "/products" },
-    { name: "About", href: "/about" },
-    { name: "Contact", href: "/contact" },
   ]
 
   return (
@@ -53,55 +53,54 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center space-x-4">
+            <Link href="/cart">
+              <Button variant="ghost" size="icon" aria-label="Cart" className="relative">
+                <ShoppingCart className="h-5 w-5" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+
             {user ? (
-              <>
-                <Link href="/wishlist">
-                  <Button variant="ghost" size="icon" aria-label="Wishlist">
-                    <Heart className="h-5 w-5" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/placeholder.svg" alt={user.email || ""} />
+                      <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
                   </Button>
-                </Link>
-                <Link href="/cart">
-                  <Button variant="ghost" size="icon" aria-label="Cart">
-                    <ShoppingCart className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src="/placeholder.svg" alt={user.email || ""} />
-                        <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/orders">
-                        <Package className="mr-2 h-4 w-4" />
-                        Orders
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => signOut()}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/orders">
+                      <Package className="mr-2 h-4 w-4" />
+                      Orders
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
-                <Link href="/auth/login">
-                  <Button variant="ghost">Login</Button>
+                <Link href="/auth/signin">
+                  <Button variant="ghost">Sign In</Button>
                 </Link>
-                <Link href="/auth/register">
-                  <Button>Register</Button>
+                <Link href="/auth/signup">
+                  <Button>Sign Up</Button>
                 </Link>
               </>
             )}
@@ -109,20 +108,16 @@ export default function Header() {
         </div>
 
         <div className="flex md:hidden ml-auto">
-          {user && (
-            <>
-              <Link href="/wishlist">
-                <Button variant="ghost" size="icon" aria-label="Wishlist">
-                  <Heart className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/cart">
-                <Button variant="ghost" size="icon" aria-label="Cart">
-                  <ShoppingCart className="h-5 w-5" />
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link href="/cart">
+            <Button variant="ghost" size="icon" aria-label="Cart" className="relative">
+              <ShoppingCart className="h-5 w-5" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                  {cartItems.length}
+                </span>
+              )}
+            </Button>
+          </Link>
 
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
@@ -183,19 +178,19 @@ export default function Header() {
                         </Link>
                         <Button variant="outline" className="w-full justify-start" onClick={() => signOut()}>
                           <LogOut className="mr-2 h-4 w-4" />
-                          Log out
+                          Sign out
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="grid gap-2">
-                      <Link href="/auth/login" onClick={() => setIsOpen(false)}>
+                      <Link href="/auth/signin" onClick={() => setIsOpen(false)}>
                         <Button variant="outline" className="w-full">
-                          Login
+                          Sign In
                         </Button>
                       </Link>
-                      <Link href="/auth/register" onClick={() => setIsOpen(false)}>
-                        <Button className="w-full">Register</Button>
+                      <Link href="/auth/signup" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full">Sign Up</Button>
                       </Link>
                     </div>
                   )}
