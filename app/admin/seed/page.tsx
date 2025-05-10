@@ -132,24 +132,81 @@ export default function SeedPage() {
     }
   }
 
+  const handleCreateAdmin = async () => {
+    setIsLoading(true)
+
+    try {
+      const supabase = createClient()
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        throw new Error("You must be logged in to create an admin user")
+      }
+
+      // Update user role to admin
+      const { error } = await supabase.from("app_user").update({ user_role: "admin" }).eq("user_id", user.id)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Admin created",
+        description: "Your account has been upgraded to admin.",
+      })
+
+      router.refresh()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create admin user.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Database Management</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Seed Products</CardTitle>
-          <CardDescription>Add sample products to the database</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4">
-            This will add 8 sample products to your database. Any existing products will be removed.
-          </p>
-          <Button onClick={handleSeedProducts} disabled={isLoading}>
-            {isLoading ? "Seeding..." : "Seed Products"}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Seed Products</CardTitle>
+            <CardDescription>Add sample products to the database</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">
+              This will add 8 sample products to your database. Any existing products will be removed.
+            </p>
+            <Button onClick={handleSeedProducts} disabled={isLoading}>
+              {isLoading ? "Seeding..." : "Seed Products"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Admin User</CardTitle>
+            <CardDescription>Upgrade your account to admin</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4">
+              This will upgrade your current account to have admin privileges, allowing you to manage products, users,
+              and orders.
+            </p>
+            <Button onClick={handleCreateAdmin} disabled={isLoading}>
+              {isLoading ? "Upgrading..." : "Make Me Admin"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

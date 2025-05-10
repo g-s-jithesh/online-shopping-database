@@ -1,20 +1,35 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { useCart } from "@/lib/cart-context"
 
-export default function CartSummary() {
+interface CartItem {
+  product_no: number
+  p_description: string
+  product_price: number
+  quantity: number
+}
+
+interface CartSummaryProps {
+  items: CartItem[]
+}
+
+export default function CartSummary({ items }: CartSummaryProps) {
   const router = useRouter()
-  const { cartItems, getCartTotal } = useCart()
+  const [isLoading, setIsLoading] = useState(false)
 
-  const subtotal = getCartTotal()
+  const subtotal = items.reduce((total, item) => {
+    return total + item.product_price * item.quantity
+  }, 0)
+
   const tax = subtotal * 0.1 // 10% tax
   const shipping = subtotal > 0 ? 10 : 0 // $10 shipping fee
   const total = subtotal + tax + shipping
 
   const handleCheckout = () => {
+    setIsLoading(true)
     router.push("/checkout")
   }
 
@@ -42,8 +57,8 @@ export default function CartSummary() {
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full" onClick={handleCheckout} disabled={cartItems.length === 0}>
-          Proceed to Checkout
+        <Button className="w-full" onClick={handleCheckout} disabled={items.length === 0 || isLoading}>
+          {isLoading ? "Processing..." : "Proceed to Checkout"}
         </Button>
       </CardFooter>
     </Card>
