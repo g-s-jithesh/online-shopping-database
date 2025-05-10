@@ -49,6 +49,35 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         setIsLoading(true)
         const supabase = createClient()
 
+        // First check if user profile exists
+        const { data: profileData, error: profileError } = await supabase
+          .from("app_user")
+          .select("user_id")
+          .eq("user_id", user.id)
+
+        if (profileError) throw profileError
+
+        // If profile doesn't exist, create one
+        if (!profileData || profileData.length === 0) {
+          // Create user profile using server API
+          const response = await fetch("/api/create-user-profile", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              name: user.email?.split("@")[0] || "",
+              email: user.email,
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Failed to create user profile")
+          }
+        }
+
+        // Now fetch order details
         const { data, error } = await supabase
           .from("sales_order")
           .select(`

@@ -71,21 +71,69 @@ export default function ProfilePage() {
         const supabase = createClient()
 
         // Fetch user profile
-        const { data, error } = await supabase.from("app_user").select("*").eq("user_id", user.id).single()
+        const { data, error } = await supabase.from("app_user").select("*").eq("user_id", user.id)
 
         if (error) throw error
 
-        setProfile(data)
-        setFormData({
-          name: data.user_name || "",
-          address: data.user_address || "",
-          pincode: data.user_pincode || "",
-          mobile: data.user_mobile || "",
-          age: data.user_age?.toString() || "",
-          gender: data.user_gender || "",
-          birthday: data.user_birthday || "",
-          occupation: data.user_occupation || "",
-        })
+        // Check if we have a profile
+        if (data && data.length > 0) {
+          const userProfile = data[0]
+          setProfile(userProfile)
+          setFormData({
+            name: userProfile.user_name || "",
+            address: userProfile.user_address || "",
+            pincode: userProfile.user_pincode || "",
+            mobile: userProfile.user_mobile || "",
+            age: userProfile.user_age?.toString() || "",
+            gender: userProfile.user_gender || "",
+            birthday: userProfile.user_birthday || "",
+            occupation: userProfile.user_occupation || "",
+          })
+        } else {
+          // Create a new profile if one doesn't exist
+          try {
+            // Create user profile using server API
+            const response = await fetch("/api/create-user-profile", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                name: user.email?.split("@")[0] || "",
+                email: user.email,
+              }),
+            })
+
+            if (!response.ok) {
+              throw new Error("Failed to create user profile")
+            }
+
+            // Fetch the newly created profile
+            const { data: newProfile } = await supabase.from("app_user").select("*").eq("user_id", user.id)
+
+            if (newProfile && newProfile.length > 0) {
+              setProfile(newProfile[0])
+              setFormData({
+                name: newProfile[0].user_name || "",
+                address: "",
+                pincode: "",
+                mobile: "",
+                age: "",
+                gender: "",
+                birthday: "",
+                occupation: "",
+              })
+            }
+          } catch (profileError) {
+            console.error("Error creating profile:", profileError)
+            toast({
+              title: "Error",
+              description: "Failed to create user profile.",
+              variant: "destructive",
+            })
+          }
+        }
 
         // Fetch user orders
         const { data: orderData, error: orderError } = await supabase
